@@ -386,7 +386,7 @@ void NetworkInterfaceASIO::_asyncRunCommand(AsyncOp* op, NetworkOpHandler handle
     auto cmd = op->command();
 
     // Step 4
-    auto recvMessageCallback = [this, cmd, handler, op](std::error_code ec, size_t bytes) {
+    auto recvMessageCallback = [handler](std::error_code ec, size_t bytes) {
         // We don't call _validateAndRun here as we assume the caller will.
         handler(ec, bytes);
     };
@@ -396,7 +396,7 @@ void NetworkInterfaceASIO::_asyncRunCommand(AsyncOp* op, NetworkOpHandler handle
                                                                             size_t bytes) {
         // The operation could have been canceled after starting the command, but before
         // receiving the header
-        _validateAndRun(op, ec, [this, op, recvMessageCallback, ec, bytes, cmd, handler] {
+        _validateAndRun(op, ec, [recvMessageCallback, bytes, cmd, handler] {
             // validate response id
             uint32_t expectedId = cmd->toSend().header().getId();
             uint32_t actualId = cmd->header().constView().getResponseToMsgId();
@@ -417,7 +417,7 @@ void NetworkInterfaceASIO::_asyncRunCommand(AsyncOp* op, NetworkOpHandler handle
     // Step 2
     auto sendMessageCallback = [this, cmd, handler, recvHeaderCallback, op](std::error_code ec,
                                                                             size_t bytes) {
-        _validateAndRun(op, ec, [this, cmd, op, recvHeaderCallback] {
+        _validateAndRun(op, ec, [cmd, recvHeaderCallback] {
             asyncRecvMessageHeader(
                 cmd->conn().stream(), &cmd->header(), std::move(recvHeaderCallback));
         });

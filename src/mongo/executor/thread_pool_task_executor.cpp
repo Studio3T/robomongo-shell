@@ -287,7 +287,7 @@ StatusWith<TaskExecutor::CallbackHandle> ThreadPoolTaskExecutor::scheduleWorkAt(
         return cbHandle;
     }
     lk.unlock();
-    _net->setAlarm(when, [this, when, cbHandle] {
+    _net->setAlarm(when, [this, cbHandle] {
         auto cbState = checked_cast<CallbackState*>(getCallbackFromHandle(cbHandle.getValue()));
         if (cbState->canceled.load()) {
             return;
