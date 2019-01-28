@@ -394,7 +394,7 @@ Status NetworkInterfaceASIO::startCommand(const TaskExecutor::CallbackHandle& cb
                 }
 
                 op->_timeoutAlarm->asyncWait(
-                    [this, op, access, generation, requestId, adjustedTimeout](std::error_code ec) {
+                    [op, access, generation, requestId, adjustedTimeout](std::error_code ec) {
                         // We must pass a check for safe access before using op inside the
                         // callback or we may attempt access on an invalid pointer.
                         stdx::lock_guard<stdx::mutex> lk(access->mutex);

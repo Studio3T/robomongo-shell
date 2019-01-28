@@ -308,7 +308,7 @@ string demangleName(const type_info& typeinfo) {
 #endif
 }
 
-Status exceptionToStatus() noexcept {
+Status exceptionToStatus() {
     try {
         throw;
     } catch (const DBException& ex) {
