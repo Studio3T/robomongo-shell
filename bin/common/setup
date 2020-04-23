@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+if [ "$1" == "debug" ]; then
+  BUILD_TYPE_SWITCH="--dbg"
+  VARIANT_DIR=debug
+else
+  BUILD_TYPE_SWITCH="--release"
+  VARIANT_DIR=opt
+
+  # Prepend "release" in front of $@
+  set -- release "$@"
+fi
+
+# On Mac OS we specify minimal OS version that we support.
+if [ "$(uname -s)" == "Darwin" ]; then
+    MAC_SDK_SWITCH="--osx-version-min=10.9"
+fi
