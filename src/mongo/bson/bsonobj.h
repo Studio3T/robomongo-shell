@@ -578,6 +578,14 @@ public:
         return sizeof(BSONObj) + ownedSize;
     }
 
+    // Robomongo
+    // The following methods are added in order to allow explicit
+    // mark on BSONObj that this is an JS array.
+    // Also we need to add virtual destructor
+    virtual bool isArray() const { return _isArray; }
+    void markAsArray() { _isArray = true; };
+    virtual ~BSONObj() {}
+
 private:
     void _assertInvalid(int maxSize) const;
 
@@ -590,6 +598,9 @@ private:
 
     const char* _objdata;
     ConstSharedBuffer _ownedBuffer;
+
+    // Robomongo
+    bool _isArray = false;
 };
 
 MONGO_STATIC_ASSERT(std::is_nothrow_move_constructible_v<BSONObj>);
@@ -609,6 +620,10 @@ struct BSONArray : BSONObj {
     // Don't add anything other than forwarding constructors!!!
     BSONArray() : BSONObj() {}
     explicit BSONArray(const BSONObj& obj) : BSONObj(obj) {}
+
+    // Robomongo
+    // The following method is added in order to distinguish between BSONArray and BSONObject
+    virtual bool isArray() const { return true; }    
 };
 
 /**

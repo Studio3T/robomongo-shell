@@ -528,7 +528,9 @@ DBQuery.prototype.shellPrint = function() {
         var start = new Date().getTime();
         var n = 0;
         while (this.hasNext() && n < DBQuery.shellBatchSize) {
-            var s = this._prettyShell ? tojson(this.next()) : tojson(this.next(), "", true);
+            // Robomongo. Do not convert to JSON
+            // var s = this._prettyShell ? tojson( this.next() ) : tojson( this.next() , "" , true );
+            var s = this.next();
             print(s);
             n++;
         }
@@ -537,6 +539,7 @@ DBQuery.prototype.shellPrint = function() {
             print("Fetched " + n + " record(s) in " + time + "ms");
         }
         if (this.hasNext()) {
+            // Robomongo. Do not print shell specific info            
             print("Type \"it\" for more");
             ___it___ = this;
         } else {

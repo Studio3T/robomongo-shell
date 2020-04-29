@@ -455,6 +455,13 @@ public:
         return runCommand(nsGetDB(ns).c_str(), cmd, info);
     }
 
+    // Robo 1.3
+    /**
+        Get a list of all the current databases uses the { listDatabases : 1 } command.
+        Throws on error
+    */
+    std::list<std::string> getDatabaseNames();    
+
     /**
      * { name : "<short collection name>",
      *   options : { }

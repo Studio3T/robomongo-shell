@@ -44,6 +44,13 @@
 #include "mongo/scripting/mozjs/valuewriter.h"
 #include "mongo/util/version.h"
 
+//#ifdef ROBOMONGO
+#include "mongo/scripting/mozjs/valuewriter.h"
+extern std::vector<mongo::BSONObj> __objects;
+extern std::stringstream __logs;
+extern void robomongo_add_bsonobj(const mongo::BSONObj &obj);
+//#endif
+
 namespace mongo {
 namespace mozjs {
 
@@ -67,7 +74,9 @@ logger::MessageLogDomain* jsPrintLogDomain;
 
 void GlobalInfo::Functions::print::call(JSContext* cx, JS::CallArgs args) {
     logger::LogstreamBuilder builder(jsPrintLogDomain, getThreadName(), logger::LogSeverity::Log());
-    std::ostream& ss = builder.stream();
+    // Robomongo
+    //std::ostream& ss = builder.stream();    
+    std::stringstream& ss = __logs;    
 
     bool first = true;
     for (size_t i = 0; i < args.length(); i++) {
@@ -82,7 +91,39 @@ void GlobalInfo::Functions::print::call(JSContext* cx, JS::CallArgs args) {
             continue;
         }
 
-        JSStringWrapper jsstr(cx, JS::ToString(cx, args.get(i)));
+        // --- Robomongo - start
+        JS::HandleValue value = args.get(i);
+        ValueWriter writer = ValueWriter(cx, value);
+        int valueType = writer.type();
+
+        // Handle objects and arrays specially
+        if (valueType == Object || valueType == Array) {
+            JS::RootedObject jsObj(cx, value.toObjectOrNull());
+            auto jsClass = JS_GetClass(jsObj);
+
+            // Check that this is not an Error object
+            if (strcmp(jsClass->name, "Error") != 0) {
+
+                // Convert to bson
+                BSONObj obj = ValueWriter(cx, value).toBSON();
+
+                // Handle arrays specially
+                if (writer.type() == Array) {
+                    // This method on BSONObj is an extension for
+                    // Robomongo Shell and not part of original MongoDB sources
+                    obj.markAsArray();
+                }
+
+                robomongo_add_bsonobj(obj);
+                continue;
+            }
+        }
+
+        // Because this is not a value that we can handle specially,
+        // convert it to a string (it actually calls "toString")
+        JSStringWrapper jsstr(cx, JS::ToString(cx, value));
+        // --- Robomongo - end
+        
         ss << jsstr.toStringData();
     }
     ss << std::endl;

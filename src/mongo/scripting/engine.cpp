@@ -55,6 +55,9 @@ using std::unique_ptr;
 
 AtomicWord<long long> Scope::_lastVersion(1);
 
+//#ifdef ROBOMONGO
+volatile bool Scope::_interruptFlag = false;
+//#endif
 
 namespace {
 
