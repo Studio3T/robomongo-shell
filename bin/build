@@ -27,10 +27,10 @@ if [ $1 == debug ]; then
 fi
 
 # MacOS
-# 1. MongoDB 4.x requires macOS 10.10 or later
+# 1. MongoDB 4.2 requires macOS 10.13 or later
 # 2. src/mongo/util/net/ssl_manager_apple.cpp:977:18: error: 'SSLCopyRequestedPeerName' 
-#    is only available on macOS 10.11 or newer
-MACOS_FLAGS="-mmacosx-version-min=10.11 -Wno-unused-function"
+#    is only available on macOS 10.13 or newer
+MACOS_FLAGS="-mmacosx-version-min=10.13 -Wno-unused-function"
 
 cd $PROJECT_DIR
 echo -------------------------------------

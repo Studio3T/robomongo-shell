@@ -13,5 +13,5 @@ fi
 
 # On Mac OS we specify minimal OS version that we support.
 if [ "$(uname -s)" == "Darwin" ]; then
-    MAC_SDK_SWITCH="--osx-version-min=10.9"
+    MAC_SDK_SWITCH="--osx-version-min=10.13"
 fi
