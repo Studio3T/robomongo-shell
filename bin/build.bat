@@ -25,9 +25,11 @@ set OPENSSL_PATH=%OPENSSL_PATH:"=%
 
 rem Set build type
 SET BUILD_TYPE_STR=release
+SET BUILD_OBJECTS_DIR=build\opt
 if "%1%"=="debug" (
   SET BUILD_TYPE=--dbg
   SET BUILD_TYPE_STR=debug
+  SET BUILD_OBJECTS_DIR=build\debug
 )
 
 rem -----------------------------------
@@ -40,4 +42,10 @@ rem Build mongo shell
 echo -------------------------------------
 echo Building in %BUILD_TYPE_STR% mode:
 echo -------------------------------------
-scons mongo.exe %BUILD_TYPE% --ssl CPPPATH=%OPENSSL_PATH%\inc32 LIBPATH=%OPENSSL_PATH%\out32dll -j8 --link-model=object --disable-minimum-compiler-version-enforcement
+scons mongo.exe %BUILD_TYPE% --ssl CPPPATH=%OPENSSL_PATH%\inc32 LIBPATH=%OPENSSL_PATH%\out32dll -j8 --link-model=object --disable-minimum-compiler-version-enforcement && ^
+echo ------------------------------------- && ^
+if defined MongoDB_OBJECTS ( 
+  echo Found MongoDB_OBJECTS environment variable. Copying object files...
+  echo This may take a couple of minutes. Please wait...
+  robocopy ..\%BUILD_OBJECTS_DIR% %MongoDB_OBJECTS%\\%BUILD_OBJECTS_DIR% /MIR /NFL /NDL
+)
