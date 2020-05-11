@@ -103,8 +103,10 @@ using HigherPrecisionDuration =
  * the ToDuration. For example, Seconds::max() cannot be represented as a Milliseconds, and so
  * attempting to cast that value to Milliseconds will throw an exception.
  */
+// Robo 1.4: To solve Visual Studio constexpr error 
+// error C3615: constexpr 'mongoSignedMultiplyOverflow64' cannot result in a constant expression 
 template <typename ToDuration, typename FromPeriod>
-constexpr ToDuration duration_cast(const Duration<FromPeriod>& from) {
+ToDuration duration_cast(const Duration<FromPeriod>& from) {
     using FromOverTo = std::ratio_divide<FromPeriod, typename ToDuration::period>;
     if (ToDuration::template isHigherPrecisionThan<Duration<FromPeriod>>()) {
         typename ToDuration::rep toCount = 0;

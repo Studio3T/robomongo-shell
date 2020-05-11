@@ -39,12 +39,16 @@
 
 namespace mongo {
 
+// Robo 1.4: To solve Visual Studio constexpr error 
+// error C3615: constexpr 'mongoSignedMultiplyOverflow64' cannot result in a constant expression 
+#ifndef _MSC_VER
 /**
  * Returns true if multiplying lhs by rhs would overflow. Otherwise, multiplies 64-bit signed
  * or unsigned integers lhs by rhs and stores the result in *product.
  */
 constexpr bool mongoSignedMultiplyOverflow64(int64_t lhs, int64_t rhs, int64_t* product);
 constexpr bool mongoUnsignedMultiplyOverflow64(uint64_t lhs, uint64_t rhs, uint64_t* product);
+#endif
 
 /**
  * Returns true if adding lhs and rhs would overflow. Otherwise, adds 64-bit signed or unsigned
@@ -65,11 +69,15 @@ constexpr bool mongoUnsignedSubtractOverflow64(uint64_t lhs, uint64_t rhs, uint6
 
 // The SafeInt functions return true on success, false on overflow.
 
-constexpr bool mongoSignedMultiplyOverflow64(int64_t lhs, int64_t rhs, int64_t* product) {
+// Robo 1.4: To solve Visual Studio constexpr error 
+// error C3615: constexpr 'mongoSignedMultiplyOverflow64' cannot result in a constant expression 
+inline bool mongoSignedMultiplyOverflow64(int64_t lhs, int64_t rhs, int64_t* product) {
     return !SafeMultiply(lhs, rhs, *product);
 }
 
-constexpr bool mongoUnsignedMultiplyOverflow64(uint64_t lhs, uint64_t rhs, uint64_t* product) {
+// Robo 1.4: To solve Visual Studio constexpr error 
+// error C3615: constexpr 'mongoSignedMultiplyOverflow64' cannot result in a constant expression 
+inline bool mongoUnsignedMultiplyOverflow64(uint64_t lhs, uint64_t rhs, uint64_t* product) {
     return !SafeMultiply(lhs, rhs, *product);
 }
 

@@ -84,10 +84,12 @@ public:
     static constexpr size_t kDefaultMaxConns = std::numeric_limits<size_t>::max();
     static constexpr size_t kDefaultMinConns = 1;
     static constexpr size_t kDefaultMaxConnecting = 2;
-    static constexpr Milliseconds kDefaultHostTimeout = Minutes(5);
-    static constexpr Milliseconds kDefaultRefreshRequirement = Minutes(1);
-    static constexpr Milliseconds kDefaultRefreshTimeout = Seconds(20);
-    static constexpr Milliseconds kHostRetryTimeout = Seconds(1);
+    // Robo 1.4: To solve Visual Studio constexpr error 
+    // error C3615: constexpr 'mongoSignedMultiplyOverflow64' cannot result in a constant expression     
+    inline static const Milliseconds kDefaultHostTimeout = Minutes(5);
+    inline static const Milliseconds kDefaultRefreshRequirement = Minutes(1);
+    inline static const Milliseconds kDefaultRefreshTimeout = Seconds(20);
+    inline static const Milliseconds kHostRetryTimeout = Seconds(1);
 
     static const Status kConnectionStateUnknown;
 
