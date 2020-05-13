@@ -51,6 +51,10 @@
 #include "mongo/util/log.h"
 #include "mongo/util/scopeguard.h"
 
+//#ifdef ROBOMONGO
+extern std::stringstream __logs;
+//#endif
+
 #if !defined(__has_feature)
 #define __has_feature(x) 0
 #endif
@@ -925,6 +929,9 @@ bool MozJSImplScope::_checkErrorState(bool success, bool reportError, bool asser
     } else {
         _error = _status.reason();
     }
+
+    // Robo 1.4: (_error) seems to be the final error string to catch, instead of (ss)
+    __logs << _error;
 
     if (reportError)
         error() << redact(_error);
