@@ -43,7 +43,7 @@ echo -------------------------------------
 echo Building in %BUILD_TYPE_STR% mode:
 echo -------------------------------------
 scons mongo.exe %BUILD_TYPE% --ssl CPPPATH=%OPENSSL_PATH%\inc32 LIBPATH=%OPENSSL_PATH%\out32dll -j8 --link-model=object --disable-minimum-compiler-version-enforcement && ^
-echo ------------------------------------- && ^
+echo ------------------------------------- END OF BUILD && ^
 if defined MongoDB_OBJECTS ( 
   echo Found MongoDB_OBJECTS environment variable. Copying object files...
   echo This may take a couple of minutes. Please wait...
