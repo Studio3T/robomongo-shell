@@ -184,6 +184,17 @@ public:
     virtual ~SSLManagerInterface();
 
     /**
+    * Robo 1.3
+    * @brief    Reconfigures and reinitiates mongo::SSLManager as client
+    * @return   true on success, false otherwise
+    * @details  Need for this function comes from the fact that Robomongo can/will need to 
+    *           create multiple SSL connections unlike mongo shell client which is designed 
+    *           to create single connection from command line; so each time SSL manager and 
+    *           OpenSSL context need to be reconfigured using this function from Robomongo.
+    */
+    virtual bool reinitiateSSLManager() = 0;
+
+    /**
      * Initiates a TLS connection.
      * Throws SocketException on failure.
      * @return a pointer to an SSLConnectionInterface. Resources are freed in

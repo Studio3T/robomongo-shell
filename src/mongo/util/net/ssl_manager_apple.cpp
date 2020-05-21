@@ -1204,6 +1204,11 @@ class SSLManagerApple : public SSLManagerInterface {
 public:
     explicit SSLManagerApple(const SSLParams& params, bool isServer);
 
+    // Robo 1.3: Update this function with each MongoDB version.
+    //           Put "client" related ctor code into this function.
+    //           See base class for more details.
+    bool reinitiateSSLManager() override;
+
     Status initSSLContext(asio::ssl::apple::Context* context,
                           const SSLParams& params,
                           ConnectionDirection direction) final;
@@ -1258,51 +1263,104 @@ SSLManagerApple::SSLManagerApple(const SSLParams& params, bool isServer)
       _allowInvalidHostnames(params.sslAllowInvalidHostnames),
       _suppressNoCertificateWarning(params.suppressNoTLSPeerCertificateWarning) {
 
-    uassertStatusOK(initSSLContext(&_clientCtx, params, ConnectionDirection::kOutgoing));
+    /* --- Robo 1.3
+    *      Disabling all ctor code, Robo will run client related parts for each new connection in reinitiateSSLManager()
+    */ 
+    // uassertStatusOK(initSSLContext(&_clientCtx, params, ConnectionDirection::kOutgoing));
+    // if (_clientCtx.certs) {
+    //     _sslConfiguration.clientSubjectName =
+    //         uassertStatusOK(certificateGetSubject(_clientCtx.certs.get()));
+    // }
+
+    // if (isServer) {
+    //     uassertStatusOK(initSSLContext(&_serverCtx, params, ConnectionDirection::kIncoming));
+    //     if (_serverCtx.certs) {
+    //         uassertStatusOK(
+    //             _sslConfiguration.setServerSubjectName(uassertStatusOK(certificateGetSubject(
+    //                 _serverCtx.certs.get(), &_sslConfiguration.serverCertificateExpirationDate))));
+    //         static auto task =
+    //             CertificateExpirationMonitor(_sslConfiguration.serverCertificateExpirationDate);
+    //     }
+    // }
+
+    // if (!params.sslCAFile.empty()) {
+    //     auto ca = uassertStatusOK(loadPEM(params.sslCAFile, "", kLoadPEMStripKeys));
+    //     _clientCA = std::move(ca);
+    //     _sslConfiguration.hasCA = _clientCA && ::CFArrayGetCount(_clientCA.get());
+    // }
+
+    // if (!params.sslCertificateSelector.empty() || !params.sslClusterCertificateSelector.empty()) {
+    //     // By using the system keychain, we acknowledge it exists.
+    //     _sslConfiguration.hasCA = true;
+    // }
+
+    // if (!_clientCA) {
+    //     // No explicit CA was specified, use the Keychain CA explicitly on client connects,
+    //     // even though we're going to pretend it doesn't exist on server.
+    //     ::CFArrayRef certs = nullptr;
+    //     uassertOSStatusOK(SecTrustCopyAnchorCertificates(&certs));
+    //     _clientCA.reset(certs);
+    // }
+
+    // if (!params.sslClusterCAFile.empty()) {
+    //     auto ca = uassertStatusOK(loadPEM(params.sslClusterCAFile, "", kLoadPEMStripKeys));
+    //     _serverCA = std::move(ca);
+    // } else {
+    //     // No inbound CA specified, share a reference with outbound CA.
+    //     auto ca = _clientCA.get();
+    //     ::CFRetain(ca);
+    //     _serverCA.reset(ca);
+    // }
+    /* --- Robo 1.3 --- */    
+}
+
+bool SSLManagerApple::reinitiateSSLManager()
+{
+    auto const& params = getSSLGlobalParams();
+    _weakValidation = params.sslWeakCertificateValidation;
+    _allowInvalidCertificates = params.sslAllowInvalidCertificates;
+    _allowInvalidHostnames = params.sslAllowInvalidHostnames;
+    _suppressNoCertificateWarning = params.suppressNoTLSPeerCertificateWarning;
+
+    // Try to replicate the client related parts of the ctor
+    if(!initSSLContext(&_clientCtx, params, ConnectionDirection::kOutgoing).isOK())
+        return false;
+
     if (_clientCtx.certs) {
-        _sslConfiguration.clientSubjectName =
-            uassertStatusOK(certificateGetSubject(_clientCtx.certs.get()));
+        auto const& statusWithValue = certificateGetSubject(_clientCtx.certs.get());
+        if(!statusWithValue.isOK())
+            return false;
+        _sslConfiguration.clientSubjectName = statusWithValue.getValue();
     }
 
-    if (isServer) {
-        uassertStatusOK(initSSLContext(&_serverCtx, params, ConnectionDirection::kIncoming));
-        if (_serverCtx.certs) {
-            uassertStatusOK(
-                _sslConfiguration.setServerSubjectName(uassertStatusOK(certificateGetSubject(
-                    _serverCtx.certs.get(), &_sslConfiguration.serverCertificateExpirationDate))));
-            static auto task =
-                CertificateExpirationMonitor(_sslConfiguration.serverCertificateExpirationDate);
-        }
-    }
+    // Robo 1.3
+    _sslConfiguration.hasCA = false;
 
     if (!params.sslCAFile.empty()) {
-        auto ca = uassertStatusOK(loadPEM(params.sslCAFile, "", kLoadPEMStripKeys));
-        _clientCA = std::move(ca);
+        auto statusWithValue = loadPEM(params.sslCAFile, "", kLoadPEMStripKeys);
+        if(!statusWithValue.isOK())
+            return false;
+
+        _clientCA = std::move(statusWithValue.getValue());
         _sslConfiguration.hasCA = _clientCA && ::CFArrayGetCount(_clientCA.get());
-    }
+    } 
 
     if (!params.sslCertificateSelector.empty() || !params.sslClusterCertificateSelector.empty()) {
         // By using the system keychain, we acknowledge it exists.
         _sslConfiguration.hasCA = true;
-    }
+    }    
 
     if (!_clientCA) {
         // No explicit CA was specified, use the Keychain CA explicitly on client connects,
         // even though we're going to pretend it doesn't exist on server.
         ::CFArrayRef certs = nullptr;
-        uassertOSStatusOK(SecTrustCopyAnchorCertificates(&certs));
+        if(SecTrustCopyAnchorCertificates(&certs) != ::errSecSuccess)
+            return false;
+
         _clientCA.reset(certs);
     }
 
-    if (!params.sslClusterCAFile.empty()) {
-        auto ca = uassertStatusOK(loadPEM(params.sslClusterCAFile, "", kLoadPEMStripKeys));
-        _serverCA = std::move(ca);
-    } else {
-        // No inbound CA specified, share a reference with outbound CA.
-        auto ca = _clientCA.get();
-        ::CFRetain(ca);
-        _serverCA.reset(ca);
-    }
+    return true;
 }
 
 StatusWith<std::pair<::SSLProtocol, ::SSLProtocol>> parseProtocolRange(const SSLParams& params) {
@@ -1373,6 +1431,9 @@ Status SSLManagerApple::initSSLContext(asio::ssl::apple::Context* context,
             context->certs = std::move(swCerts.getValue());
             return Status::OK();
         }
+        else // Robo 1.3
+            context->certs.release();
+        
         return Status::OK();
     };
 

@@ -322,6 +322,10 @@ Status DBClientConnection::connectSocketOnly(const HostAndPort& serverAddress) {
                                     << ", address resolved to 0.0.0.0");
     }
 
+    // Robo 1.3: Robo needs to re-initiate SSLManager with each connection request
+    if (!getSSLManager()->reinitiateSSLManager())
+        return{ ErrorCodes::InvalidSSLConfiguration, "SSLManager reinitiateSSLManager() failed" };
+
     auto sws = getGlobalServiceContext()->getTransportLayer()->connect(
         serverAddress, _uri.getSSLMode(), _socketTimeout.value_or(Milliseconds{5000}));
     if (!sws.isOK()) {

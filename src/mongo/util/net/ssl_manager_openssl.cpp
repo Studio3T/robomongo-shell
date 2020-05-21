@@ -438,6 +438,11 @@ class SSLManagerOpenSSL : public SSLManagerInterface {
 public:
     explicit SSLManagerOpenSSL(const SSLParams& params, bool isServer);
 
+    // Robo 1.3: Update this function with each MongoDB version.
+    //           Put "client" related ctor code into this function.
+    //           See base class for more details.
+    bool reinitiateSSLManager() override;
+
     /**
      * Initializes an OpenSSL context according to the provided settings. Only settings which are
      * acceptable on non-blocking connections are set.
@@ -527,6 +532,16 @@ private:
 
             _password = SecureString(pwBuf.data());
             return StringData(_password->c_str());
+        }
+
+        // Robo 1.4
+        void set(const std::string& pwd) {
+            _password->assign(pwd);
+        }
+        
+        // Robo 1.4
+        void clear() {
+            _password->clear();
         }
 
     private:
@@ -815,7 +830,11 @@ SSLManagerOpenSSL::SSLManagerOpenSSL(const SSLParams& params, bool isServer)
       _allowInvalidHostnames(params.sslAllowInvalidHostnames),
       _suppressNoCertificateWarning(params.suppressNoTLSPeerCertificateWarning),
       _serverPEMPassword(params.sslPEMKeyPassword, "Enter PEM passphrase"),
-      _clusterPEMPassword(params.sslClusterPassword, "Enter cluster certificate passphrase") {
+      _clusterPEMPassword(params.sslClusterPassword, "Enter cluster certificate passphrase") 
+{
+    /* --- Robo 1.3
+    *      Disabling all ctor code, Robo will run client related parts for each new connection in reinitiateSSLManager()
+    */    
     if (!_initSynchronousSSLContext(&_clientContext, params, ConnectionDirection::kOutgoing)) {
         uasserted(16768, "ssl initialization problem");
     }
@@ -859,6 +878,44 @@ SSLManagerOpenSSL::SSLManagerOpenSSL(const SSLParams& params, bool isServer)
         static CertificateExpirationMonitor task =
             CertificateExpirationMonitor(_sslConfiguration.serverCertificateExpirationDate);
     }
+    /* --- Robo 1.3 --- */
+}
+
+bool SSLManagerOpenSSL::reinitiateSSLManager() 
+{
+    auto const& params = getSSLGlobalParams();
+    _weakValidation = params.sslWeakCertificateValidation;
+    _allowInvalidCertificates = params.sslAllowInvalidCertificates;
+    _allowInvalidHostnames = params.sslAllowInvalidHostnames;
+    _suppressNoCertificateWarning = params.suppressNoTLSPeerCertificateWarning;
+
+    /* --- Try to replicate the client related parts of the ctor --- */
+    if (!_initSynchronousSSLContext(&_clientContext, params, ConnectionDirection::kOutgoing))
+        return false;
+
+    // pick the certificate for use in outgoing connections,
+    std::string clientPEM;
+    PasswordFetcher* clientPassword;
+    if (params.sslClusterFile.empty()) {
+        // We are either a client, or a server without a cluster key,
+        // so use the PEM key file, if specified
+        clientPEM = params.sslPEMKeyFile;
+        clientPassword = &_serverPEMPassword;
+        clientPassword->set(params.sslPEMKeyPassword);  // Robo 1.4
+    } 
+    else { // Robo 1.3
+        clientPEM.clear();
+        clientPassword->clear();
+    }
+
+    if (!clientPEM.empty() &&
+        !_parseAndValidateCertificate(
+            clientPEM, clientPassword, &_sslConfiguration.clientSubjectName, NULL
+        )
+    )
+        return false;
+
+    return true;		
 }
 
 int SSLManagerOpenSSL::password_cb(char* buf, int num, int rwflag, void* userdata) {

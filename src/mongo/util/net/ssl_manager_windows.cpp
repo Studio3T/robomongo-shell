@@ -266,6 +266,11 @@ class SSLManagerWindows : public SSLManagerInterface {
 public:
     explicit SSLManagerWindows(const SSLParams& params, bool isServer);
 
+    // Robo 1.3: Update this function with each MongoDB version.
+    //           Put "client" related ctor code into this function.
+    //           See base class for more details.
+    bool reinitiateSSLManager() override;
+
     /**
      * Initializes an OpenSSL context according to the provided settings. Only settings which are
      * acceptable on non-blocking connections are set.
@@ -397,47 +402,68 @@ SSLManagerWindows::SSLManagerWindows(const SSLParams& params, bool isServer)
     : _weakValidation(params.sslWeakCertificateValidation),
       _allowInvalidCertificates(params.sslAllowInvalidCertificates),
       _allowInvalidHostnames(params.sslAllowInvalidHostnames),
-      _suppressNoCertificateWarning(params.suppressNoTLSPeerCertificateWarning) {
+      _suppressNoCertificateWarning(params.suppressNoTLSPeerCertificateWarning) 
+{
+    /* --- Robo 1.3
+    *      Disabling all ctor code, Robo will run client related parts for each new connection in reinitiateSSLManager()
+    */ 
+    // if (params.sslFIPSMode) {
+    //     BOOLEAN enabled = FALSE;
+    //     BCryptGetFipsAlgorithmMode(&enabled);
+    //     if (!enabled) {
+    //         severe() << "FIPS modes is not enabled on the operating system.";
+    //         fassertFailedNoTrace(50744);
+    //     }
+    // }
 
-    if (params.sslFIPSMode) {
-        BOOLEAN enabled = FALSE;
-        BCryptGetFipsAlgorithmMode(&enabled);
-        if (!enabled) {
-            severe() << "FIPS modes is not enabled on the operating system.";
-            fassertFailedNoTrace(50744);
-        }
-    }
+    // uassertStatusOK(_loadCertificates(params));
 
-    uassertStatusOK(_loadCertificates(params));
+    // uassertStatusOK(initSSLContext(&_clientCred, params, ConnectionDirection::kOutgoing));
 
-    uassertStatusOK(initSSLContext(&_clientCred, params, ConnectionDirection::kOutgoing));
+    // // Certificates may not have been loaded. This typically occurs in unit tests.
+    // if (_clientCertificates[0] != nullptr) {
+    //     uassertStatusOK(_validateCertificate(
+    //         _clientCertificates[0], &_sslConfiguration.clientSubjectName, NULL));
+    // }
 
-    // Certificates may not have been loaded. This typically occurs in unit tests.
-    if (_clientCertificates[0] != nullptr) {
-        uassertStatusOK(_validateCertificate(
-            _clientCertificates[0], &_sslConfiguration.clientSubjectName, NULL));
-    }
+    // // SSL server specific initialization
+    // if (isServer) {
+    //     uassertStatusOK(initSSLContext(&_serverCred, params, ConnectionDirection::kIncoming));
 
-    // SSL server specific initialization
-    if (isServer) {
-        uassertStatusOK(initSSLContext(&_serverCred, params, ConnectionDirection::kIncoming));
+    //     if (_serverCertificates[0] != nullptr) {
+    //         SSLX509Name subjectName;
+    //         uassertStatusOK(
+    //             _validateCertificate(_serverCertificates[0],
+    //                                  &subjectName,
+    //                                  &_sslConfiguration.serverCertificateExpirationDate));
+    //         uassertStatusOK(_sslConfiguration.setServerSubjectName(std::move(subjectName)));
+    //     }
 
-        if (_serverCertificates[0] != nullptr) {
-            SSLX509Name subjectName;
-            uassertStatusOK(
-                _validateCertificate(_serverCertificates[0],
-                                     &subjectName,
-                                     &_sslConfiguration.serverCertificateExpirationDate));
-            uassertStatusOK(_sslConfiguration.setServerSubjectName(std::move(subjectName)));
-        }
+    //     // Monitor the server certificate's expiration
+    //     static CertificateExpirationMonitor task =
+    //         CertificateExpirationMonitor(_sslConfiguration.serverCertificateExpirationDate);
+    // }
 
-        // Monitor the server certificate's expiration
-        static CertificateExpirationMonitor task =
-            CertificateExpirationMonitor(_sslConfiguration.serverCertificateExpirationDate);
-    }
+    // uassertStatusOK(_initChainEngines(&_serverEngine));
+    // uassertStatusOK(_initChainEngines(&_clientEngine));
+    /* --- Robo 1.3 --- */    
+}
 
-    uassertStatusOK(_initChainEngines(&_serverEngine));
-    uassertStatusOK(_initChainEngines(&_clientEngine));
+bool SSLManagerWindows::reinitiateSSLManager()
+{
+    auto const& sslParams = getSSLGlobalParams();
+    _weakValidation = sslParams.sslWeakCertificateValidation;
+    _allowInvalidCertificates = sslParams.sslAllowInvalidCertificates;
+    _allowInvalidHostnames = sslParams.sslAllowInvalidHostnames;
+    _suppressNoCertificateWarning = sslParams.suppressNoTLSPeerCertificateWarning;
+
+    // Try to replicate the client related parts of the SSLManagerWindows ctor
+    if (!_loadCertificates(sslParams).isOK() ||
+        !initSSLContext(&_clientCred, sslParams, ConnectionDirection::kOutgoing).isOK() ||
+        !_initChainEngines(&_clientEngine).isOK())
+        return false;
+
+    return true; 
 }
 
 StatusWith<UniqueCertChainEngine> initChainEngine(CERT_CHAIN_ENGINE_CONFIG* chainEngineConfig,
@@ -1253,6 +1279,8 @@ Status SSLManagerWindows::_loadCertificates(const SSLParams& params) {
 
         _pemCertificate = std::move(swCertificate.getValue());
     }
+    else // Robo 1.3
+        std::get<0>(_pemCertificate).release();
 
     // Load the cluster PEM file, only applies to server side code
     if (!params.sslClusterFile.empty()) {
@@ -1286,6 +1314,8 @@ Status SSLManagerWindows::_loadCertificates(const SSLParams& params) {
 
         _clientEngine.CAstore = std::move(swChain.getValue());
     }
+    else // Robo 1.3
+        _sslConfiguration.hasCA = false;    
 
     const auto serverCAFile =
         params.sslClusterCAFile.empty() ? params.sslCAFile : params.sslClusterCAFile;

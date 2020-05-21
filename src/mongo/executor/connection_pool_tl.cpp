@@ -53,6 +53,7 @@ struct TimeoutHandler {
 }  // namespace
 
 void TLTypeFactory::shutdown() {
+    /**** Robomongo: To prevent a crash on MacOS at program exit when connected to Mongo Atlas
     // Stop any attempt to schedule timers in the future
     _inShutdown.store(true);
 
@@ -62,6 +63,7 @@ void TLTypeFactory::shutdown() {
     for (auto collar : _collars) {
         collar->kill();
     }
+    ****/
 }
 
 void TLTypeFactory::fasten(Type* type) {

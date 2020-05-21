@@ -251,7 +251,9 @@ ssl_want SSLHandshakeManager::startShutdown(asio::error_code& ec) {
         }
 
         // TODO - I have not found a way to hit this code path
-        ASIO_ASSERT(false);
+        // Robo 1.3
+        //  ASIO_ASSERT(false);
+        throw std::runtime_error("ASIO_ASSERT in SSLHandshakeManager::startShutdown()");        
     }
 
     return ssl_want::want_nothing;
