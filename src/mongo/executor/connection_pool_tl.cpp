@@ -53,17 +53,17 @@ struct TimeoutHandler {
 }  // namespace
 
 void TLTypeFactory::shutdown() {
-    /**** Robomongo: To prevent a crash on MacOS at program exit when connected to Mongo Atlas
     // Stop any attempt to schedule timers in the future
     _inShutdown.store(true);
 
     stdx::lock_guard<Latch> lk(_mutex);
 
-    log() << "Killing all outstanding egress activity.";
+    // Robo 1.4: This line causes uncaught exception error at exit on macOS
+    // log() << "Killing all outstanding egress activity.";
+    std::cout << "<Robo-shell>: Info: Killing all outstanding egress activity. \n";
     for (auto collar : _collars) {
         collar->kill();
     }
-    ****/
 }
 
 void TLTypeFactory::fasten(Type* type) {

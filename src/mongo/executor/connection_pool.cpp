@@ -855,9 +855,13 @@ void ConnectionPool::SpecificPool::processFailure(const Status& status) {
     _generation++;
 
     if (!_readyPool.empty() || !_processingPool.empty()) {
-        auto severity = MONGO_GET_LIMITED_SEVERITY(_hostAndPort, Seconds{1}, 0, 2);
-        LOG(severity) << "Dropping all pooled connections to " << _hostAndPort << " due to "
-                      << redact(status);
+        /* Robo 1.4: This line causes uncaught exception error at exit on macOS */
+        // auto severity = MONGO_GET_LIMITED_SEVERITY(_hostAndPort, Seconds{1}, 0, 2);  
+        /* Robo 1.4: This line causes program halt at exit on Windows */
+        // LOG(severity) << "Dropping all pooled connections to " << _hostAndPort << " due to "
+        //               << redact(status);
+        std::cout << "<Robo-shell>: Info: Dropping all pooled connections to " 
+                  << _hostAndPort << " due to " << redact(status) << "\n";
     }
 
     // When a connection enters the ready pool, its timer is set to eventually refresh the
