@@ -321,9 +321,11 @@ Status DBClientConnection::connectSocketOnly(const HostAndPort& serverAddress) {
                       str::stream() << "couldn't connect to server " << _serverAddress.toString()
                                     << ", address resolved to 0.0.0.0");
     }
-
+    
     // Robo 1.3: Robo needs to re-initiate SSLManager with each connection request
-    if (!getSSLManager()->reinitiateSSLManager())
+    if (mongo::sslGlobalParams.sslMode.load() == mongo::SSLParams::SSLMode_requireSSL &&
+        !getSSLManager()->reinitiateSSLManager()
+    )
         return{ ErrorCodes::InvalidSSLConfiguration, "SSLManager reinitiateSSLManager() failed" };
 
     auto sws = getGlobalServiceContext()->getTransportLayer()->connect(
