@@ -6,7 +6,7 @@ source $BIN_DIR/common/setup $1
 
 # OpenSSL is needed only for Linux
 # https://docs.mongodb.com/manual/tutorial/configure-ssl/
-if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+if [[ "$(uname -s)" == *"Linux"* ]]; then
   # Find OpenSSL directory
   OPENSSL_PATH=UNKNOWN
   for i in $(echo $ROBOMONGO_CMAKE_PREFIX_PATH | tr ";" "\n")
@@ -41,9 +41,9 @@ echo -------------------------------------
 echo Building in $BUILD_TYPE_STR mode:
 echo -------------------------------------
 
-if [ "$(uname)" == "Darwin" ]; then
-  scons mongo --ssl CCFLAGS=$MACOS_FLAGS LINKFLAGS=$MACOS_FLAGS -j8 $BUILD_TYPE
-elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+if [[ "$(uname)" == *"Darwin"* ]]; then
+  scons mongo --ssl CCFLAGS=$MACOS_FLAGS LINKFLAGS=$MACOS_FLAGS -j8 $BUILD_TYPE  
+elif [[ "$(uname -s)" == *"Linux"* ]]; then
   scons mongo --ssl CPPPATH=$OPENSSL_PATH/include LIBPATH=$OPENSSL_PATH/lib -j8 $BUILD_TYPE
 else 
   echo -e "Error: Unsupported platform" 
