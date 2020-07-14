@@ -4,18 +4,22 @@ BIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"       # Get director
 PROJECT_DIR=$(dirname $BIN_DIR)                                   # Get root directory of project
 source $BIN_DIR/common/setup $1
 
-# Find OpenSSL directory
-OPENSSL_PATH=UNKNOWN
-for i in $(echo $ROBOMONGO_CMAKE_PREFIX_PATH | tr ";" "\n")
- do
-  if [ -f $i/include/openssl/ssl.h ]; then
-   OPENSSL_PATH=$i
+# OpenSSL is needed only for Linux
+# https://docs.mongodb.com/manual/tutorial/configure-ssl/
+if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+  # Find OpenSSL directory
+  OPENSSL_PATH=UNKNOWN
+  for i in $(echo $ROBOMONGO_CMAKE_PREFIX_PATH | tr ";" "\n")
+  do
+    if [ -f $i/include/openssl/ssl.h ]; then
+    OPENSSL_PATH=$i
+    fi
+  done
+  if [ $OPENSSL_PATH == UNKNOWN ]; then
+    echo -e "Error: Build failed, ROBOMONGO_CMAKE_PREFIX_PATH must contain correct -  
+            path to openssl-1.0.2o (i.e. /home/user/openssl-1.0.1o)"
+    exit 1
   fi
-done
-if [ $OPENSSL_PATH == UNKNOWN ]; then
- echo -e "Error: Build failed, ROBOMONGO_CMAKE_PREFIX_PATH must contain correct -  
-          path to openssl-1.0.2o (i.e. /home/user/openssl-1.0.1o)"
- exit 1
 fi
 
 # Build mongo in release mode by default 
@@ -38,7 +42,7 @@ echo Building in $BUILD_TYPE_STR mode:
 echo -------------------------------------
 
 if [ "$(uname)" == "Darwin" ]; then
-  scons mongo --ssl CCFLAGS=$MACOS_FLAGS LINKFLAGS=$MACOS_FLAGS CPPPATH=$OPENSSL_PATH/include LIBPATH=$OPENSSL_PATH/lib -j8 $BUILD_TYPE
+  scons mongo --ssl CCFLAGS=$MACOS_FLAGS LINKFLAGS=$MACOS_FLAGS -j8 $BUILD_TYPE
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
   scons mongo --ssl CPPPATH=$OPENSSL_PATH/include LIBPATH=$OPENSSL_PATH/lib -j8 $BUILD_TYPE
 else 
