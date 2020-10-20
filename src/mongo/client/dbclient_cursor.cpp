@@ -136,6 +136,15 @@ Message DBClientCursor::_assembleInit() {
                 // QueryRequest doesn't handle $readPreference.
                 cmd = BSONObjBuilder(std::move(cmd)).append(readPref).obj();
             }
+
+            //// Robo 1.4.2
+            std::string const N_TO_RETURN { "ntoreturn" };
+            if(_client->isDocDb() && cmd.hasField(N_TO_RETURN)) {
+                std::string const ntoreturnVal { std::to_string(cmd.getIntField(N_TO_RETURN)) };
+                cmd = cmd.removeField(N_TO_RETURN);                
+                cmd = cmd.addField(fromjson("{ limit: " + ntoreturnVal + " }").firstElement());                            
+            }
+
             return assembleCommandRequest(_client, ns.db(), opts, std::move(cmd));
         }
         // else use legacy OP_QUERY request.

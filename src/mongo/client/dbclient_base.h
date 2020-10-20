@@ -687,6 +687,10 @@ public:
     // This is only for DBClientCursor.
     static void (*withConnection_do_not_use)(std::string host, std::function<void(DBClientBase*)>);
 
+    //// Robo 1.4.2
+    virtual bool isDocDb() { return _isDocDb; };
+    virtual void tagAsDocDb(bool tag) { _isDocDb = tag; };
+
 protected:
     /** if the result of a command is ok*/
     bool isOk(const BSONObj&);
@@ -738,6 +742,8 @@ private:
 
     enum QueryOptions _cachedAvailableOptions;
     bool _haveCachedAvailableOptions;
+    
+    bool _isDocDb = false; //// Robo 1.4.2    
 };  // DBClientBase
 
 BSONElement getErrField(const BSONObj& result);
